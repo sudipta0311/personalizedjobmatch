@@ -188,12 +188,15 @@ models:
   scoring:                          # LLM semantic fit (high volume)
     provider: openai
     model: gpt-4o-mini
-  tailoring:                        # CV / cover letter (Phase 5)
-    provider: anthropic
-    model: claude-opus-4-8
+  tailoring:                        # CV / cover letter (Phase 5) — quality-critical
+    provider: openai
+    model: gpt-4o
   outreach:                         # LinkedIn outreach drafts (Phase 5)
-    provider: anthropic
-    model: claude-opus-4-8
+    provider: openai
+    model: gpt-4o
+  # To use Claude instead on any node (needs Anthropic credits):
+  #   provider: anthropic
+  #   model: claude-opus-4-8
 
 # ---------------------------------------------------------------------------
 # CV CONTENT — master list of everything; agent selects and emphasises per JD

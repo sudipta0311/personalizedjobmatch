@@ -22,7 +22,7 @@ from langgraph.graph import END, StateGraph
 from agent.config import Settings
 from agent.email import gmail
 from agent.replies import persistence
-from agent.replies.executor import compose_ack, execute_commands
+from agent.replies.executor import ExecContext, compose_ack, execute_commands
 from agent.replies.parser import parse_reply
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,11 @@ def node_execute(state: ReplyState) -> ReplyState:
             logger.info("Skipping already-processed reply %s", message_id)
             continue
 
-        ack_lines = execute_commands(commands, reply.get("index_map", {}))
+        ctx = _exec_context(
+            state["profile"], service, settings,
+            thread_id=reply["thread_id"], in_reply_to=message_id,
+        )
+        ack_lines = execute_commands(commands, reply.get("index_map", {}), ctx=ctx)
         body = compose_ack(reply.get("from", ""), ack_lines)
 
         subject = reply.get("subject") or "Job digest"
@@ -113,6 +117,25 @@ def node_execute(state: ReplyState) -> ReplyState:
 
     logger.info("Executor: processed %d new reply message(s)", len(results))
     return {**state, "execution_results": results}
+
+
+def _exec_context(
+    profile: dict, service: Any, settings: Settings, *, thread_id: str, in_reply_to: str
+) -> ExecContext:
+    """Build the execution context with thread-aware email senders."""
+    def send_text(subject: str, body: str) -> None:
+        gmail.send_reply(
+            service, settings.email_to, subject, body,
+            thread_id=thread_id, in_reply_to=in_reply_to,
+        )
+
+    def send_attachments(subject: str, body: str, paths: list[str]) -> None:
+        gmail.send_reply_with_attachments(
+            service, settings.email_to, subject, body, paths,
+            thread_id=thread_id, in_reply_to=in_reply_to,
+        )
+
+    return ExecContext(profile=profile, send_text=send_text, send_attachments=send_attachments)
 
 
 def build_reply_graph() -> StateGraph:

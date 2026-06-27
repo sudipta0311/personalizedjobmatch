@@ -113,6 +113,73 @@ def log_event(job_id: Any, event_type: str, payload: dict[str, Any]) -> None:
             )
 
 
+def get_jobs(job_ids: list[Any]) -> dict[str, dict[str, Any]]:
+    """Fetch full job rows by id (keyed by id::text) for tailoring."""
+    if not job_ids:
+        return {}
+    with get_connection() as conn:
+        with get_cursor(conn) as cur:
+            cur.execute(
+                """
+                SELECT id::text AS id, source, company, title, location, country,
+                       market_tag, jd_text, url
+                FROM jobs WHERE id::text = ANY(%s)
+                """,
+                ([str(j) for j in job_ids],),
+            )
+            return {r["id"]: dict(r) for r in cur.fetchall()}
+
+
+def set_application_prepared(
+    job_id: Any, cv_path: str, letter_path: str, answers: dict[str, Any]
+) -> None:
+    """Mark an application 'prepared' and store the generated artifact paths."""
+    with get_connection() as conn:
+        with get_cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO applications
+                    (job_id, status, cv_path, letter_path, answers, prepared_at, updated_at)
+                VALUES (%s, 'prepared', %s, %s, %s, now(), now())
+                ON CONFLICT (job_id) DO UPDATE SET
+                    status = 'prepared',
+                    cv_path = EXCLUDED.cv_path,
+                    letter_path = EXCLUDED.letter_path,
+                    answers = EXCLUDED.answers,
+                    prepared_at = now(),
+                    updated_at = now()
+                """,
+                (job_id, cv_path, letter_path, Json(answers)),
+            )
+            cur.execute(
+                "INSERT INTO events (job_id, type, payload) VALUES (%s, 'prepared', %s)",
+                (job_id, Json({"cv_path": cv_path, "letter_path": letter_path})),
+            )
+
+
+def set_application_warm(job_id: Any, linkedin_play: dict[str, Any]) -> None:
+    """Mark an application 'warm_drafted' and store the LinkedIn play JSON."""
+    with get_connection() as conn:
+        with get_cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO applications
+                    (job_id, status, linkedin_play, warm_drafted_at, updated_at)
+                VALUES (%s, 'warm_drafted', %s, now(), now())
+                ON CONFLICT (job_id) DO UPDATE SET
+                    status = 'warm_drafted',
+                    linkedin_play = EXCLUDED.linkedin_play,
+                    warm_drafted_at = now(),
+                    updated_at = now()
+                """,
+                (job_id, Json(linkedin_play)),
+            )
+            cur.execute(
+                "INSERT INTO events (job_id, type, payload) VALUES (%s, 'warm_drafted', %s)",
+                (job_id, Json({"search_string": linkedin_play.get("search_string")})),
+            )
+
+
 def job_titles(job_ids: list[Any]) -> dict[Any, str]:
     """Map job_id -> 'Title — Company' for friendlier acknowledgements."""
     if not job_ids:

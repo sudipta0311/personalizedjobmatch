@@ -7,6 +7,7 @@ tested against a hand-built payload.
 from __future__ import annotations
 
 import base64
+from email import message_from_bytes
 
 import pytest
 
@@ -146,11 +147,12 @@ def test_execute_skip_sets_status(captured):
     assert any("Skipped" in line for line in ack)
 
 
-def test_execute_prepare_records_intent(captured):
+def test_execute_prepare_records_intent_without_ctx(captured):
+    # No ExecContext -> Phase-4 fallback: record intent only.
     ack = executor.execute_commands([Command("prepare", [1])], INDEX_MAP)
     assert ("job-1", "shortlisted", "prepare requested") in captured["status"]
     assert any(e[1] == "prepare_requested" for e in captured["events"])
-    assert any("Phase 5" in line for line in ack)
+    assert any("Queued for prepare" in line for line in ack)
 
 
 def test_execute_warm_records_intent(captured):
@@ -181,6 +183,80 @@ def test_compose_ack_includes_lines_and_reminder():
     body = executor.compose_ack("me@x.com", ["Skipped: Title-1"])
     assert "Skipped: Title-1" in body
     assert "nothing is submitted automatically" in body
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — prepare/warm with an ExecContext (generation + send mocked)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def phase5(monkeypatch):
+    calls = {"prepared": [], "warm": [], "sent_text": [], "sent_attach": []}
+    monkeypatch.setattr(executor.persistence, "get_jobs",
+                        lambda ids: {str(i): {"id": str(i), "title": f"Title-{i}",
+                                              "company": "Acme", "jd_text": "x",
+                                              "market_tag": "eu"} for i in ids})
+    monkeypatch.setattr(executor.persistence, "set_application_prepared",
+                        lambda job_id, cv, letter, answers: calls["prepared"].append((job_id, cv, letter)))
+    monkeypatch.setattr(executor.persistence, "set_application_warm",
+                        lambda job_id, play: calls["warm"].append((job_id, play)))
+    return calls
+
+
+class _Pkg:
+    def __init__(self):
+        self.cv_path = "out/cv.docx"
+        self.letter_path = "out/letter.docx"
+        self.answers = {"work_authorisation": "EU Blue Card", "notice_period": "1 month",
+                        "relocation": "open", "why_this_role": "fit"}
+        self.verify_ok = True
+        self.verify_missing = []
+
+
+def _ctx(phase5_calls):
+    return executor.ExecContext(
+        profile={"personal": {"name": "T"}},
+        send_text=lambda s, b: phase5_calls["sent_text"].append((s, b)),
+        send_attachments=lambda s, b, p: phase5_calls["sent_attach"].append((s, b, p)),
+        build_package=lambda profile, job, out_dir, client: _Pkg(),
+        build_play=lambda profile, job, client: {"search_string": "X AND Y",
+                                                 "contacts": [], "connection_note": "hi",
+                                                 "follow_up": "more"},
+        render_play_email=lambda job, play: f"PLAY for {job['title']}: {play['search_string']}",
+    )
+
+
+def test_prepare_with_ctx_generates_and_emails(phase5):
+    ctx = _ctx(phase5)
+    ack = executor.execute_commands([Command("prepare", [1])], INDEX_MAP, ctx=ctx)
+    assert phase5["prepared"] == [("job-1", "out/cv.docx", "out/letter.docx")]
+    assert len(phase5["sent_attach"]) == 1
+    subject, body, paths = phase5["sent_attach"][0]
+    assert paths == ["out/cv.docx", "out/letter.docx"]
+    assert "PASSED" in body
+    assert any("Prepared & emailed" in line for line in ack)
+
+
+def test_warm_with_ctx_generates_and_emails(phase5):
+    ctx = _ctx(phase5)
+    ack = executor.execute_commands([Command("warm", [2])], INDEX_MAP, ctx=ctx)
+    assert phase5["warm"][0][0] == "job-2"
+    assert len(phase5["sent_text"]) == 1
+    assert "PLAY for Title-job-2" in phase5["sent_text"][0][1]
+    assert any("LinkedIn play emailed" in line for line in ack)
+
+
+def test_build_raw_message_with_attachments(tmp_path):
+    from agent.email.gmail import build_raw_message
+    f = tmp_path / "cv.docx"
+    f.write_bytes(b"PK\x03\x04 fake docx")
+    body = build_raw_message("me@x.com", "Pkg", "see attached",
+                             attachments=[str(f)])
+    raw = base64.urlsafe_b64decode(body["raw"])
+    msg = message_from_bytes(raw)
+    assert msg.get_content_type() == "multipart/mixed"
+    dispositions = [p.get("Content-Disposition", "") for p in msg.walk()]
+    assert any("attachment" in d and "cv.docx" in d for d in dispositions)
 
 
 # ---------------------------------------------------------------------------

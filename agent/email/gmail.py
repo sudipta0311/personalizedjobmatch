@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any
@@ -36,17 +38,31 @@ def build_raw_message(
     *,
     sender: str = "me",
     thread_headers: dict[str, str] | None = None,
+    attachments: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build a Gmail API `messages.send` body (base64url-encoded MIME).
 
     Pure + dependency-free, so it's unit-testable without google libs.
     """
     if html_body:
-        mime: Any = MIMEMultipart("alternative")
-        mime.attach(MIMEText(text_body, "plain", "utf-8"))
-        mime.attach(MIMEText(html_body, "html", "utf-8"))
+        body: Any = MIMEMultipart("alternative")
+        body.attach(MIMEText(text_body, "plain", "utf-8"))
+        body.attach(MIMEText(html_body, "html", "utf-8"))
     else:
-        mime = MIMEText(text_body, "plain", "utf-8")
+        body = MIMEText(text_body, "plain", "utf-8")
+
+    if attachments:
+        mime: Any = MIMEMultipart("mixed")
+        mime.attach(body)
+        for path in attachments:
+            with open(path, "rb") as fh:
+                part = MIMEApplication(fh.read())
+            part.add_header(
+                "Content-Disposition", "attachment", filename=os.path.basename(path)
+            )
+            mime.attach(part)
+    else:
+        mime = body
 
     mime["To"] = to
     mime["From"] = sender
@@ -116,6 +132,29 @@ def send_reply(
         headers["In-Reply-To"] = in_reply_to
         headers["References"] = in_reply_to
     body = build_raw_message(to, subject, text_body, thread_headers=headers)
+    body["threadId"] = thread_id
+    sent = service.users().messages().send(userId="me", body=body).execute()
+    return sent.get("id", ""), sent.get("threadId", "")
+
+
+def send_reply_with_attachments(
+    service: Any,
+    to: str,
+    subject: str,
+    text_body: str,
+    attachments: list[str],
+    *,
+    thread_id: str,
+    in_reply_to: str | None = None,
+) -> tuple[str, str]:
+    """Send a threaded reply carrying file attachments (e.g. CV + cover letter)."""
+    headers: dict[str, str] = {}
+    if in_reply_to:
+        headers["In-Reply-To"] = in_reply_to
+        headers["References"] = in_reply_to
+    body = build_raw_message(
+        to, subject, text_body, thread_headers=headers, attachments=attachments
+    )
     body["threadId"] = thread_id
     sent = service.users().messages().send(userId="me", body=body).execute()
     return sent.get("id", ""), sent.get("threadId", "")

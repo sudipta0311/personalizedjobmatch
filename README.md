@@ -221,9 +221,9 @@ size), `LOG_LEVEL=DEBUG`.
 | 1 | ✅ Done | Scaffold, config, Neon schema, Greenhouse source, dedupe |
 | 2 | ✅ Done | Scoring: rule gates (auth/grade/market/exclusions) + LLM fit, composite, filter |
 | 3 | ✅ Done | Gmail send — weekly digest (text+HTML, command syntax); `discover.yml` wired |
-| 4 | ✅ Done | Gmail read — reply poller + idempotent command parser; `replies.yml` wired (prepare/warm/skip + info/ask recorded) |
-| 5 | ⬜ Next | `prepare` tailoring (CV + letter + form answers + parse-verify); `warm` LinkedIn play |
-| 6 | ⬜ | Tracker reminders in the digest; full `info` / `ask` modes |
+| 4 | ✅ Done | Gmail read — reply poller + idempotent command parser; `replies.yml` wired |
+| 5 | ✅ Done | `prepare` → tailored ATS CV + cover letter + form answers + parse-verify, emailed as attachments; `warm` → LinkedIn play (boolean search + public contacts + outreach drafts), manual-execution checklist |
+| 6 | ⬜ Next | Tracker reminders in the digest; full `info` / `ask` modes |
 
 ---
 
