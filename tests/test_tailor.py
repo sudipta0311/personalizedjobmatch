@@ -125,21 +125,117 @@ def test_generate_tailored_parses(profile, tailored):
 
 
 # ---------------------------------------------------------------------------
-# LinkedIn play (manual-only)
+# LinkedIn play (manual-only) — boolean_search_string
 # ---------------------------------------------------------------------------
 
-def test_boolean_search_string_includes_company():
-    s = boolean_search_string(JOB)
+def test_boolean_search_string_ai_role_includes_company_and_ai_terms():
+    """AI/ML title → AI decision-maker role terms + company clause."""
+    job = {"title": "Senior AI Architect", "company": "EPAM",
+           "location": "Amsterdam, Netherlands", "jd_text": ""}
+    s = boolean_search_string(job)
     assert '"EPAM"' in s
-    assert "recruiter" in s
+    assert "head of AI" in s
+    assert "technical recruiter" in s
 
+
+def test_boolean_search_string_arch_role_includes_arch_terms():
+    """Architect/platform title → architecture leader role terms."""
+    job = {"title": "Principal Platform Architect", "company": "Acme",
+           "location": "Berlin, Germany", "jd_text": ""}
+    s = boolean_search_string(job)
+    assert '"Acme"' in s
+    assert "head of architecture" in s
+    assert '"Berlin"' in s
+
+
+def test_boolean_search_string_city_appended():
+    """City (before first comma) is appended when not remote/global."""
+    job = {"title": "Cloud Architect", "company": "X", "location": "Copenhagen, Denmark"}
+    s = boolean_search_string(job)
+    assert '"Copenhagen"' in s
+
+
+def test_boolean_search_string_remote_city_excluded():
+    """Remote location: no city clause in the search string."""
+    job = {"title": "AI Architect", "company": "X", "location": "Remote, Europe"}
+    s = boolean_search_string(job)
+    assert '"Remote"' not in s
+    assert '"Europe"' not in s
+
+
+def test_boolean_search_string_europe_city_excluded():
+    job = {"title": "AI Architect", "company": "X", "location": "Europe (Remote)"}
+    s = boolean_search_string(job)
+    assert '"Europe' not in s
+
+
+def test_boolean_search_string_default_domain():
+    """Unrecognised title → generic hiring/engineering manager terms."""
+    job = {"title": "Product Manager", "company": "Y", "location": "Stockholm, Sweden"}
+    s = boolean_search_string(job)
+    assert "engineering manager" in s or "hiring manager" in s
+
+
+# ---------------------------------------------------------------------------
+# LinkedIn play — public_contacts
+# ---------------------------------------------------------------------------
 
 def test_public_contacts_extracts_emails():
     contacts = public_contacts(JOB)
-    emails = {c["value"] for c in contacts}
-    assert "careers@epam.com" in emails
-    assert "jane@epam.com" in emails
+    email_vals = {c["value"] for c in contacts if c["type"] == "email"}
+    assert "careers@epam.com" in email_vals
+    assert "jane@epam.com" in email_vals
 
+
+def test_public_contacts_extracts_named_contact():
+    job = {"title": "AI Architect", "company": "X",
+           "jd_text": "Please contact Jane Smith for more information about the role."}
+    contacts = public_contacts(job)
+    names = [c["value"] for c in contacts if c["type"] == "name"]
+    assert "Jane Smith" in names
+
+
+def test_public_contacts_named_contact_multiple_cues():
+    jd = "Reach out to Alice Brown or email Bob Chen with questions."
+    job = {"title": "Architect", "company": "Y", "jd_text": jd}
+    contacts = public_contacts(job)
+    names = {c["value"] for c in contacts if c["type"] == "name"}
+    assert "Alice Brown" in names or "Bob Chen" in names  # at least one found
+
+
+def test_public_contacts_always_has_search_hint():
+    """A search_hint entry is always appended, even when the JD has no emails."""
+    job = {"title": "AI Architect", "company": "X", "jd_text": "No emails here."}
+    contacts = public_contacts(job)
+    hints = [c for c in contacts if c["type"] == "search_hint"]
+    assert len(hints) == 1
+    assert hints[0]["value"]  # non-empty
+
+
+def test_public_contacts_search_hint_ai_role():
+    job = {"title": "Head of AI Engineering", "company": "X", "jd_text": ""}
+    contacts = public_contacts(job)
+    hint = next(c for c in contacts if c["type"] == "search_hint")
+    assert "Head of AI" in hint["value"]
+
+
+def test_public_contacts_search_hint_arch_role():
+    job = {"title": "Principal Architect", "company": "X", "jd_text": ""}
+    contacts = public_contacts(job)
+    hint = next(c for c in contacts if c["type"] == "search_hint")
+    assert "Head of Architecture" in hint["value"]
+
+
+def test_public_contacts_no_duplicate_emails():
+    jd = "Email us at info@co.com or info@co.com again."
+    job = {"title": "AI Architect", "company": "X", "jd_text": jd}
+    emails = [c for c in public_contacts(job) if c["type"] == "email"]
+    assert len(emails) == 1
+
+
+# ---------------------------------------------------------------------------
+# LinkedIn play — build + render (manual-only)
+# ---------------------------------------------------------------------------
 
 def test_build_linkedin_play_truncates_note(profile):
     long_note = "x" * 500
@@ -150,10 +246,44 @@ def test_build_linkedin_play_truncates_note(profile):
     assert play["search_string"]
 
 
+def test_build_linkedin_play_threads_match_points_into_prompt(profile):
+    """match_points kwarg must appear in the LLM system prompt."""
+    captured_calls: list[dict] = []
+
+    class _CapturingCC:
+        def create(self, **kwargs):
+            captured_calls.append(kwargs)
+            out = Outreach(connection_note="hi", follow_up="follow up")
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=out.model_dump_json()))]
+            )
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=_CapturingCC()))
+    build_linkedin_play(profile, JOB, client=client,
+                        match_points=["Strong RAG expertise", "Azure AI Foundry experience"])
+    assert captured_calls, "LLM was not called"
+    system = captured_calls[0]["messages"][0]["content"]
+    assert "Strong RAG expertise" in system
+
+
 def test_render_play_email_is_manual_labelled():
-    play = {"search_string": "X AND Y", "contacts": [{"value": "a@b.com", "source": "posting"}],
+    play = {"search_string": "X AND Y",
+            "contacts": [{"value": "a@b.com", "source": "posting"}],
             "connection_note": "hi", "follow_up": "more"}
     body = render_play_email(JOB, play)
     assert "MANUALLY" in body.upper()
     assert "X AND Y" in body
     assert "a@b.com" in body
+
+
+def test_render_play_email_displays_search_hint():
+    play = {"search_string": "X AND Y",
+            "contacts": [
+                {"type": "email", "value": "a@b.com", "source": "posting"},
+                {"type": "search_hint", "value": "Look for: Head of AI",
+                 "source": "suggested — search on company pages / LinkedIn"},
+            ],
+            "connection_note": "hi", "follow_up": "more"}
+    body = render_play_email(JOB, play)
+    assert "Head of AI" in body
+    assert "suggested" in body

@@ -200,6 +200,8 @@ def phase5(monkeypatch):
                         lambda job_id, cv, letter, answers: calls["prepared"].append((job_id, cv, letter)))
     monkeypatch.setattr(executor.persistence, "set_application_warm",
                         lambda job_id, play: calls["warm"].append((job_id, play)))
+    monkeypatch.setattr(executor.persistence, "get_match_points",
+                        lambda ids: {str(i): ["strong AI match"] for i in ids})
     return calls
 
 
@@ -219,9 +221,9 @@ def _ctx(phase5_calls):
         send_text=lambda s, b: phase5_calls["sent_text"].append((s, b)),
         send_attachments=lambda s, b, p: phase5_calls["sent_attach"].append((s, b, p)),
         build_package=lambda profile, job, out_dir, client: _Pkg(),
-        build_play=lambda profile, job, client: {"search_string": "X AND Y",
-                                                 "contacts": [], "connection_note": "hi",
-                                                 "follow_up": "more"},
+        build_play=lambda profile, job, client=None, match_points=None: {
+            "search_string": "X AND Y", "contacts": [], "connection_note": "hi",
+            "follow_up": "more"},
         render_play_email=lambda job, play: f"PLAY for {job['title']}: {play['search_string']}",
     )
 

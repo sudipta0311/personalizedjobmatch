@@ -191,13 +191,15 @@ def _run_warm(job_ids: list[Any], ctx: ExecContext | None) -> list[str]:
 
     ack: list[str] = []
     jobs = persistence.get_jobs(job_ids)
+    match_points_map = persistence.get_match_points(job_ids)
     for job_id in job_ids:
         job = jobs.get(str(job_id))
         if not job:
             ack.append(f"Couldn't load job {job_id} for warm.")
             continue
         try:
-            play = ctx.build_play(ctx.profile, job, client=ctx.client)
+            mp = match_points_map.get(str(job_id), [])
+            play = ctx.build_play(ctx.profile, job, client=ctx.client, match_points=mp)
             persistence.set_application_warm(job_id, play)
             body = ctx.render_play_email(job, play)
             subject = f"LinkedIn play (manual): {job.get('title')} — {job.get('company')}"

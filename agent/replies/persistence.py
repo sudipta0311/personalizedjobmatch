@@ -180,6 +180,25 @@ def set_application_warm(job_id: Any, linkedin_play: dict[str, Any]) -> None:
             )
 
 
+def get_match_points(job_ids: list[Any]) -> dict[str, list[str]]:
+    """Return {job_id (text): match_points list} from the scores table."""
+    if not job_ids:
+        return {}
+    with get_connection() as conn:
+        with get_cursor(conn) as cur:
+            cur.execute(
+                """
+                SELECT job_id::text AS job_id, match_points
+                FROM scores WHERE job_id::text = ANY(%s)
+                """,
+                ([str(j) for j in job_ids],),
+            )
+            return {
+                r["job_id"]: (r["match_points"] or [])
+                for r in cur.fetchall()
+            }
+
+
 def job_titles(job_ids: list[Any]) -> dict[Any, str]:
     """Map job_id -> 'Title — Company' for friendlier acknowledgements."""
     if not job_ids:

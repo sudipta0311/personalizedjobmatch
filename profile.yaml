@@ -1,8 +1,9 @@
 # profile.yaml — master profile for the job-search agent
 # This file is the ONLY source of truth for CV content, preferences, and filters.
 # The agent reads this and never fabricates — it only reorders/emphasises what is here.
-# SECURITY: Never commit this file with real personal data to a public repo.
-# Populate every section; delete the placeholder comments when you fill them in.
+#
+# ⚠️  SECURITY: this file now contains REAL personal data (CV, phone, salary).
+#     MAKE THE REPOSITORY PRIVATE before committing this. Do not publish it.
 
 # ---------------------------------------------------------------------------
 # PERSONAL CONTACT
@@ -10,160 +11,186 @@
 personal:
   name: "Sudipta Sarkar"
   email: "sudipta0311@gmail.com"
-  phone: "+45 91 62 90 54"
+  phone: "+45 71 62 90 54"
   location: "Copenhagen, Denmark"
   linkedin_url: "https://www.linkedin.com/in/sudipta-sarkar-73aaa85/"   # profile URL only — never automated
-  github_url: "https://github.com/yourusername"
-  website: ""  # optional personal site / portfolio
+  github_url: "https://github.com/sudipta0311"
+  website: ""
 
 # ---------------------------------------------------------------------------
 # SENIORITY — used by rule gates to flag grade mismatches
 # ---------------------------------------------------------------------------
 seniority:
-  level: "senior"       # junior | mid | senior | principal | director
-  years_experience: 15
-  min_years_in_jd: 8    # flag roles requiring fewer years (overqualified risk)
-  max_years_in_jd: 20   # flag roles requiring significantly more (out-of-reach risk)
+  level: "principal"      # junior | mid | senior | principal | director
+  years_experience: 21
+  min_years_in_jd: 8      # flag roles requiring far fewer years (overqualified risk)
+  max_years_in_jd: 25     # flag roles requiring significantly more
 
 # ---------------------------------------------------------------------------
 # TARGET — what the agent should chase; what to skip
 # ---------------------------------------------------------------------------
 target:
   titles:
+    - "Senior Solution Architect"
+    - "Enterprise Architect"
     - "Senior AI Architect"
     - "Principal AI Architect"
     - "Enterprise AI Architect"
-    - "Head of AI"
     - "AI Platform Lead"
-    - "Staff AI Engineer"
-  exclude_title_substrings:   # skip if job title contains any of these (case-insensitive)
+    - "Head of Architecture"
+    - "AI Solution Architect"
+    - "Cloud Architect"
+    - "Lead Architect"
+  exclude_title_substrings:
     - "Junior"
     - "Graduate"
     - "Intern"
-    - "VP of Engineering"     # exclude pure executive titles
-    - "Chief People"
-  exclude_companies: []       # company names to always skip (exact or substring match)
-  exclude_domains: []         # e.g. ["gambling", "crypto"] — checked against JD text
+    - "Apprentice"
+    - "Working Student"
+  exclude_companies: []
+  exclude_domains:
+    - "gambling"
+    - "adult"
 
 # ---------------------------------------------------------------------------
-# MARKET FRAMINGS
-# CV headline and positioning line are swapped per market tag.
-# The agent picks the framing that matches the role's market_tag.
+# MARKET FRAMINGS — CV headline/positioning swapped per market tag.
 # ---------------------------------------------------------------------------
 market_framings:
   eu:
     positioning: >
-      Senior AI and enterprise architect with 15+ years designing agentic systems,
-      RAG pipelines, and cloud-native data platforms across European enterprises.
-    cv_headline: "Senior AI & Enterprise Architect | Agentic AI · RAG · Azure/AWS/GCP"
+      Senior solution and enterprise architect with 21+ years delivering and governing
+      large-scale, regulated platforms across telecom, cloud, and enterprise AI. Hands-on
+      with production GenAI and agentic systems, cloud-native microservices, and OSS/BSS,
+      with the programme leadership to take complex initiatives from bid to production.
+    cv_headline: "Senior Solution & Enterprise Architect | Generative & Agentic AI · Cloud · Telecom OSS/BSS"
     keywords_emphasis:
-      - "LLM orchestration"
       - "agentic AI"
       - "RAG"
-      - "LangChain"
       - "LangGraph"
-      - "Azure"
+      - "Azure AI Foundry"
+      - "Azure OpenAI"
       - "Databricks"
       - "enterprise architecture"
+      - "Kubernetes"
+      - "Kafka"
+      - "telecom OSS/BSS"
+      - "FinOps"
+      - "Zero Trust"
 
   india:
     positioning: >
-      Returning senior AI architect with 15+ years of global enterprise experience,
-      specialising in agentic systems, cloud-native AI platforms, and centre-of-excellence build-outs.
+      Indian citizen and senior AI & enterprise architect, planning a return to India,
+      with 21+ years of global enterprise experience across telecom, cloud, and production
+      GenAI. Specialist in agentic systems, RAG platforms, and AI centre-of-excellence
+      build-outs. Compensation expectations aligned to the Indian market.
     cv_headline: "Senior AI & Enterprise Architect | Agentic AI · RAG · Cloud · Digital Transformation"
     keywords_emphasis:
+      - "AI center of excellence"
       - "digital transformation"
-      - "center of excellence"
+      - "agentic AI"
+      - "RAG"
       - "AI/ML platform"
       - "cloud adoption"
+      - "enterprise architecture"
       - "stakeholder management"
+      - "GCC"
 
   gcc:
     positioning: >
       Senior AI and enterprise architect delivering large-scale digital transformation and
-      intelligent automation for government and enterprise clients across the Gulf.
+      intelligent automation for enterprise and government clients. 21+ years across telecom,
+      cloud, and production GenAI, with deep architecture-governance and programme experience.
     cv_headline: "Senior AI & Enterprise Architect | Digital Transformation · Agentic AI · Cloud"
     keywords_emphasis:
       - "digital transformation"
       - "intelligent automation"
       - "enterprise architecture"
       - "Vision 2030"
-      - "government AI"
+      - "agentic AI"
+      - "telecom"
       - "smart city"
 
 # ---------------------------------------------------------------------------
 # WORK AUTHORISATION — per ISO 3166-1 alpha-2 country code
-# Values: authorised | blue_card_eligible | citizen | needs_visa |
-#         needs_licensed_sponsor | not_authorised | unknown
-# The rule gate maps the role's country to this table.
 # ---------------------------------------------------------------------------
 work_authorisation:
-  DK: "authorised"             # Danish work permit / residency
-  NL: "blue_card_eligible"     # EU Blue Card / Highly Skilled Migrant
+  DK: "authorised"
+  NL: "blue_card_eligible"
   DE: "blue_card_eligible"
   SE: "blue_card_eligible"
   BE: "blue_card_eligible"
   FR: "blue_card_eligible"
   FI: "blue_card_eligible"
-  NO: "needs_visa"             # Norway — not EU, check separately
+  IE: "blue_card_eligible"
+  NO: "needs_visa"
   IN: "citizen"
-  AE: "needs_visa"             # UAE — employer sponsors visa
+  AE: "needs_visa"
   SA: "needs_visa"
   QA: "needs_visa"
   BH: "needs_visa"
   KW: "needs_visa"
   OM: "needs_visa"
-  GB: "needs_licensed_sponsor" # UK — Skilled Worker, must be licensed sponsor → always flag
-  US: "not_authorised"         # no current US work authorisation
+  GB: "needs_licensed_sponsor"
+  US: "not_authorised"
   CA: "not_authorised"
   AU: "not_authorised"
-  default: "unknown"           # fall-through for unlisted countries
+  default: "unknown"
 
 # ---------------------------------------------------------------------------
 # DISCOVERY — sources and search parameters
+# Greenhouse is the only live source (Lever is a stub). Replace the boards below
+# with the Greenhouse slugs of companies that hire architects in YOUR markets.
+# Find the slug in a company's careers URL: boards.greenhouse.io/<slug>
+# VERIFY each slug resolves (a 404 in the log means the slug is wrong/not on Greenhouse).
 # ---------------------------------------------------------------------------
 discovery:
   sources:
     greenhouse:
       enabled: true
-      # List the Greenhouse board slugs for companies you want to monitor.
-      # Find the slug in a company's Greenhouse URL: jobs.greenhouse.io/<slug>
       boards:
-        - "anthropic"         # example — replace with real targets
-        - "databricks"
-        - "palantir"
-      # Optional: fetch ALL jobs from a board (true) or filter by keyword (false).
-      # When true, the agent fetches every job and filters client-side.
+        # ↓↓↓ EXAMPLES — verify each one and swap for your real EU/India/Gulf targets ↓↓↓
+        - "celonis"          # process intelligence (DE/EU, hires architects)
+        - "contentful"       # Berlin
+        - "personio"         # Munich
+        - "wise"             # London/EU
+        - "adyen"            # Amsterdam
+        # Add: Nordic/EU consultancies, telcos, banks, and product firms on Greenhouse.
+        # Verify each slug loads at boards.greenhouse.io/<slug> before relying on it.
       fetch_all: true
 
     lever:
-      enabled: false          # enable in Phase 2+
-      companies: []           # Lever site slugs
+      enabled: false         # still a stub in the codebase — leave off until implemented
+      companies: []
 
     career_pages:
-      enabled: false          # enable in Phase 2+
-      pages: []               # list of {company: str, url: str} dicts
+      enabled: false
+      pages: []
 
-  search_keywords:            # title/description filter applied client-side
-    - "AI architect"
+  search_keywords:
+    - "solution architect"
     - "enterprise architect"
+    - "AI architect"
     - "agentic"
     - "LLM"
-    - "head of AI"
+    - "RAG"
     - "machine learning architect"
-    - "data architect"
+    - "cloud architect"
+    - "platform architect"
+    - "head of architecture"
 
-  preferred_locations:        # soft preference — stored as market_tag metadata
-    - "Netherlands"
+  preferred_locations:
     - "Denmark"
+    - "Netherlands"
     - "Germany"
+    - "Sweden"
     - "India"
     - "UAE"
+    - "Saudi Arabia"
     - "Remote"
     - "Europe"
 
   remote_ok: true
-  max_age_days: 30            # ignore postings older than this
+  max_age_days: 30
 
 # ---------------------------------------------------------------------------
 # SCORING
@@ -173,155 +200,194 @@ scoring:
     llm_fit: 0.60
     auth_fit: 0.20
     grade_fit: 0.20
-  cutoff_score: 60            # drop roles below this composite score
-  top_n_digest: 10            # max roles to include in the weekly digest
-  hard_veto_on_auth:          # these auth statuses are hard veto (role not shown)
+  cutoff_score: 55           # slightly lower than default 60 while you tune; raise once matches flow
+  top_n_digest: 10
+  hard_veto_on_auth:
     - "not_authorised"
 
 # ---------------------------------------------------------------------------
-# MODELS — per-node LLM selection. Provider-agnostic: OpenAI is the default,
-# set provider: anthropic on any node to use Claude instead.
-#   provider: openai | anthropic
-#   model:    e.g. gpt-4o-mini, gpt-4o, claude-sonnet-4-6, claude-opus-4-8
+# MODELS — per-node LLM selection. provider: openai | anthropic
 # ---------------------------------------------------------------------------
 models:
-  scoring:                          # LLM semantic fit (high volume)
+  scoring:
     provider: openai
     model: gpt-4o-mini
-  tailoring:                        # CV / cover letter (Phase 5) — quality-critical
+  tailoring:
     provider: openai
     model: gpt-4o
-  outreach:                         # LinkedIn outreach drafts (Phase 5)
+  outreach:
     provider: openai
     model: gpt-4o
   # To use Claude instead on any node (needs Anthropic credits):
   #   provider: anthropic
-  #   model: claude-opus-4-8
+  #   model: claude-opus-4-8   # tailoring/outreach
+  #   model: claude-sonnet-4-6 # scoring
 
 # ---------------------------------------------------------------------------
-# CV CONTENT — master list of everything; agent selects and emphasises per JD
-# Fill this with REAL content only. Never fabricate.
+# CV CONTENT — REAL content only. Agent selects and emphasises per JD.
 # ---------------------------------------------------------------------------
 cv_content:
   summary: >
-    Senior AI and enterprise architect with 15+ years of experience designing
-    and delivering production-grade AI systems, cloud-native data platforms, and
-    enterprise architecture programmes. Specialist in agentic AI, RAG pipelines,
-    and LLM orchestration. Proven track record leading cross-functional teams and
-    translating complex AI capabilities into measurable business outcomes.
+    Senior solution and enterprise architect with 21+ years delivering and governing
+    large-scale, regulated platforms across telecom, cloud, and enterprise AI. Combines
+    deep hands-on engineering — GenAI and agentic pipelines, cloud-native microservices,
+    OSS/BSS, and IoT — with the programme leadership to take complex initiatives from
+    pre-sales and solution shaping, through architecture governance, to production at
+    scale. Cloud-agnostic at architect level (AWS Professional, Azure Expert, Azure AI
+    Engineer, Google Cloud Professional). Fluent across business and technology
+    stakeholders, having delivered for major telecom operators in the UK, Denmark, and
+    across Europe.
 
   experience:
-    - id: "exp-001"           # stable ID — used by parse-verify
-      title: "Senior AI Architect"
-      company: "Acme Corp"
+    - id: "exp-001"
+      title: "Senior Solution Architect"
+      company: "Nuuday (via Tata Consultancy Services)"
       location: "Copenhagen, Denmark"
-      start: "2021-01"
-      end: null               # null = present
+      start: "2020-01"
+      end: null
       bullets:
-        - "Designed and delivered an agentic AI platform handling 50K+ daily queries using LangGraph and Azure OpenAI, reducing analyst time-to-insight by 65%."
-        - "Led RAG pipeline implementation over a 2M-document corpus (Databricks Vector Search + GPT-4), enabling semantic search across 12 business units."
-        - "Architected multi-cloud governance framework adopted by 8 EU subsidiaries, ensuring GDPR compliance and ISO 27001 alignment."
+        - "Embedded in Nuuday's CTO-sponsored AI Centre of Excellence, leading GenAI, cloud, and enterprise architecture across the TDC Group telecom estate."
+        - "Architected an enterprise-knowledge RAG platform over Confluence and Jira on a Databricks medallion lakehouse (Mosaic AI Vector Search, Azure AI Foundry, LangGraph) with ACL-aware filtering, Entra ID and Key Vault; defined NFRs including P95 latency under 4s and 80% answer faithfulness."
+        - "Designed a multi-agent framework automating Enterprise Data Model and ETL pipeline generation on Azure Databricks, governed by Unity Catalog and a Git PR-based human-in-the-loop approval model."
+        - "Architected a real-time agentic voice solution for the contact centre (Genesys AudioHook, Azure adapter, ElevenLabs, Cognigy, Azure OpenAI) delivering live transcription, agent guidance, and automated call summarisation; reduced average call-handling time."
+        - "Led GenAI-driven mainframe modernization — externalising COBOL/CICS business logic into AI-consumable, verifiable decision assets for safer legacy transformation at scale."
+        - "Owned pre-sales solutioning and bid responses (including a mainframe-exit programme) — defining scope, NFRs, delivery approach, and commercial framing for executive and vendor audiences."
+        - "Trusted advisor to the Head of Architecture and Data & AI leadership; embedded observability, FinOps cost controls, and security-by-design from day one."
       technologies:
-        - "LangChain"
         - "LangGraph"
+        - "LangChain"
+        - "Azure AI Foundry"
         - "Azure OpenAI"
-        - "Databricks"
+        - "Databricks Mosaic AI"
         - "Python"
-        - "Terraform"
+        - "Kubernetes"
+        - "Entra ID"
+        - "Kafka"
 
     - id: "exp-002"
-      title: "Enterprise Architect"
-      company: "Previous Company"
-      location: "Amsterdam, Netherlands"
-      start: "2018-03"
-      end: "2021-01"
+      title: "Solution Architect"
+      company: "TDC Group (via Tata Consultancy Services)"
+      location: "Aarhus, Denmark"
+      start: "2013-08"
+      end: "2019-12"
       bullets:
-        - "Placeholder — replace with real bullet using Action + Metric + Impact format."
-        - "Placeholder — add 2–4 bullets per role."
+        - "Lead architect for cloud, API, IoT, and digital transformation programmes at TDC Group — Denmark's largest telecom operator and parent of Nuuday."
+        - "Architected a cloud-native API monetisation platform exposing telecom capabilities through a developer marketplace, enabling new digital revenue streams across the group."
+        - "Architected mass-scale IoT / eSIM connectivity platforms supporting millions of SIMs, including wholesale and MVNO partner ecosystems."
+        - "Defined integration standards and cloud-migration patterns adopted across group-wide programmes in a multi-vendor, onshore/offshore delivery model."
+        - "Led architecture governance and OSS/BSS modernisation across multi-year transformation initiatives."
       technologies:
         - "Azure"
+        - "AWS"
         - "Microservices"
+        - "API management"
         - "Event-driven architecture"
-        - "Domain-driven design"
+        - "OSS/BSS"
+        - "IoT / eSIM"
 
     - id: "exp-003"
-      title: "Solution Architect"
-      company: "Earlier Company"
-      location: "London, United Kingdom"
-      start: "2014-06"
-      end: "2018-02"
+      title: "Senior Developer to Designer"
+      company: "British Telecom (via Tata Consultancy Services)"
+      location: "Kolkata, India & UK"
+      start: "2004-03"
+      end: "2013-07"
       bullets:
-        - "Placeholder."
+        - "Designed large-scale data integration and analytics solutions for one of Europe's largest telecom data-warehouse programmes, supporting mission-critical 24x7 operations."
+        - "Progressed from developer to designer over nine years, building deep telecom OSS/BSS and data-engineering foundations that underpin the architecture work above."
       technologies:
-        - "AWS"
-        - "Java"
-        - "Spring Boot"
+        - "Data warehousing"
+        - "ETL"
+        - "SQL"
+        - "Telecom OSS/BSS"
 
   education:
     - id: "edu-001"
-      degree: "MSc Computer Science"
-      institution: "University Name"
-      year: 2009
-      location: "City, Country"
-    - id: "edu-002"
-      degree: "BSc Computer Engineering"
-      institution: "University Name"
-      year: 2007
-      location: "City, Country"
+      degree: "B.E., Electrical Engineering"
+      institution: "IIEST, Shibpur"
+      year: 2003
+      location: "Kolkata, India"
 
   certifications:
-    - name: "Azure Solutions Architect Expert"
-      issuer: "Microsoft"
-      year: 2022
-      credential_id: ""       # optional
     - name: "AWS Certified Solutions Architect — Professional"
       issuer: "Amazon Web Services"
-      year: 2021
+      year: 2023
+      credential_id: ""
+    - name: "Microsoft Certified: Azure Solutions Architect Expert"
+      issuer: "Microsoft"
+      year: 2023
+      credential_id: ""
+    - name: "Microsoft Certified: Azure AI Engineer Associate (AI-102)"
+      issuer: "Microsoft"
+      year: 2024
+      credential_id: ""
+    - name: "Google Cloud Certified — Professional Cloud Architect"
+      issuer: "Google Cloud"
+      year: 2023
       credential_id: ""
 
   skills:
     ai_ml:
-      - "LangChain"
-      - "LangGraph"
-      - "RAG / retrieval-augmented generation"
-      - "Vector search"
-      - "Prompt engineering"
-      - "Fine-tuning (LoRA, PEFT)"
+      - "Generative AI / LLMs"
       - "Agentic AI systems"
-      - "MLflow"
+      - "LangGraph"
+      - "LangChain"
+      - "RAG / retrieval-augmented generation"
+      - "Vector search (Mosaic AI, FAISS)"
+      - "Azure AI Foundry / Azure OpenAI"
+      - "Databricks Mosaic AI"
+      - "LLM observability & evaluation"
+      - "HITL governance"
     cloud:
-      - "Azure (Expert — Solutions Architect certified)"
-      - "AWS (Professional)"
-      - "GCP"
-      - "Databricks"
-      - "Terraform"
+      - "AWS (Solutions Architect — Professional)"
+      - "Azure (Solutions Architect — Expert)"
+      - "GCP (Professional Cloud Architect)"
+      - "Databricks lakehouse"
       - "Kubernetes"
+      - "Terraform"
+      - "CI/CD"
+    data_integration:
+      - "Apache Kafka / event streaming"
+      - "Event-driven microservices"
+      - "Delta Lake / Unity Catalog"
+      - "Data engineering & ETL"
+      - "BI & analytics (Power BI)"
+      - "Camunda / BPMN orchestration"
     architecture:
-      - "Enterprise architecture (TOGAF)"
-      - "Domain-driven design"
-      - "Event-driven architecture"
-      - "Microservices"
-      - "API design (REST, GraphQL)"
+      - "Enterprise & Solution Architecture"
+      - "Security-by-design / Zero Trust"
+      - "IAM / Entra ID"
+      - "GDPR"
+      - "FinOps cost governance"
+      - "Microservices / API design"
+    telecom:
+      - "OSS/BSS"
+      - "Order management"
+      - "CPQ & product configuration"
+      - "IoT / eSIM platforms"
+      - "Wholesale & MVNO models"
+      - "Mainframe (COBOL/CICS) modernisation"
     languages_programming:
       - "Python (advanced)"
       - "SQL (advanced)"
-      - "TypeScript"
+      - "REST APIs"
       - "Bash"
 
   languages:
     - language: "English"
-      level: "Fluent (C2)"
-    - language: "Danish"
-      level: "Conversational (B1)"
-    - language: "Hindi"
+      level: "Professional"
+    - language: "Bengali"
       level: "Native"
+    - language: "Hindi"
+      level: "Fluent"
+    - language: "Danish"
+      level: "Basic"
 
 # ---------------------------------------------------------------------------
 # LETTER STYLE — guides the LLM when writing cover letters and outreach
 # ---------------------------------------------------------------------------
 letter_style:
   tone: "confident and direct — not sycophantic, not over-eager"
-  length: "3 paragraphs, under 350 words"
+  length: "3-4 paragraphs, under 350 words"
   avoid_phrases:
     - "I am writing to express my interest in"
     - "I would be a great fit"
@@ -329,20 +395,23 @@ letter_style:
     - "passionate about"
     - "dynamic team"
   voice_notes: >
-    First person, active voice. Open with what I can deliver for THEM, not
-    what the role offers me. Acknowledge gaps honestly and briefly — one sentence
-    maximum. Reference specific technologies or business challenges from the JD.
-    Close with a concrete next step, not platitudes. No more than 3 paragraphs.
+    First person, active voice. Open with what I can deliver for THEM, not what the
+    role offers me. Lead with the strongest genuine match. Acknowledge any real gap
+    honestly and briefly in one confident sentence — never apologetic. Reference
+    specific technologies or business challenges from the JD. Close with a concrete
+    next step. For India roles, signal Indian citizenship and India-market comp
+    alignment; for EU roles, signal work authorisation (Danish permit / Blue-Card
+    eligible) where relevant.
 
 # ---------------------------------------------------------------------------
 # PREFERENCES — used in form answers and scheduling context
 # ---------------------------------------------------------------------------
-notice_period: "1 month"
+notice_period: "2-3 months"
 relocation_open: true
 remote_preference: "hybrid or fully remote"
 
 salary_expectation:
-  eu_eur: 120000      # annual gross, EUR
-  india_inr: 5000000  # annual gross, INR
-  gcc_usd: 150000     # annual gross, USD (tax-free in most GCC states)
-  note: "These are targets; the agent never surfaces exact figures unless asked."
+  eu_eur: 130000
+  india_inr: 8000000
+  gcc_usd: 160000
+  note: "Targets only; the agent never surfaces exact figures unless explicitly asked. India figure aligned to senior-architect GCC market rates."
