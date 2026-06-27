@@ -162,26 +162,37 @@ def extract_plain_text(message: dict[str, Any]) -> str:
     return (_walk(payload) or message.get("snippet", "")).strip()
 
 
-def list_unread_replies(service: Any, thread_id: str) -> list[dict[str, Any]]:
-    """Return unread messages in a thread (the user's replies), newest data first.
+def _message_summary(msg: dict[str, Any], thread_id: str) -> dict[str, Any]:
+    payload = msg.get("payload", {})
+    return {
+        "message_id": msg.get("id"),
+        "thread_id": thread_id,
+        "from": _header(payload, "From"),
+        "subject": _header(payload, "Subject"),
+        "body": extract_plain_text(msg),
+    }
 
-    Each item: {message_id, thread_id, from, subject, body}.
-    Messages we sent are already read, so UNREAD isolates incoming replies.
+
+def list_thread_messages(service: Any, thread_id: str) -> list[dict[str, Any]]:
+    """Return ALL messages in a thread as {message_id, thread_id, from, subject, body}.
+
+    We don't filter on the UNREAD label: when the agent's Gmail account is also
+    the recipient/replier (single-user setup), the user's reply is a 'sent'
+    message and never gets UNREAD. The caller excludes the digest message itself
+    and relies on command-parsing + the unique-message_id claim for idempotency.
     """
     thread = get_thread(service, thread_id)
-    out: list[dict[str, Any]] = []
-    for msg in thread.get("messages", []):
-        if "UNREAD" not in (msg.get("labelIds") or []):
-            continue
-        payload = msg.get("payload", {})
-        out.append({
-            "message_id": msg.get("id"),
-            "thread_id": thread_id,
-            "from": _header(payload, "From"),
-            "subject": _header(payload, "Subject"),
-            "body": extract_plain_text(msg),
-        })
-    return out
+    return [_message_summary(m, thread_id) for m in thread.get("messages", [])]
+
+
+def list_unread_replies(service: Any, thread_id: str) -> list[dict[str, Any]]:
+    """Return only UNREAD messages in a thread (multi-account setups)."""
+    thread = get_thread(service, thread_id)
+    return [
+        _message_summary(m, thread_id)
+        for m in thread.get("messages", [])
+        if "UNREAD" in (m.get("labelIds") or [])
+    ]
 
 
 def mark_read(service: Any, message_id: str) -> None:

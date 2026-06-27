@@ -179,14 +179,21 @@ scoring:
     - "not_authorised"
 
 # ---------------------------------------------------------------------------
-# MODELS — per-node Claude model selection (overridable here).
-# Sonnet for high-volume scoring; Opus for quality-critical tailoring/outreach.
-# Use the bare model-id strings (no date suffix).
+# MODELS — per-node LLM selection. Provider-agnostic: OpenAI is the default,
+# set provider: anthropic on any node to use Claude instead.
+#   provider: openai | anthropic
+#   model:    e.g. gpt-4o-mini, gpt-4o, claude-sonnet-4-6, claude-opus-4-8
 # ---------------------------------------------------------------------------
 models:
-  scoring: "claude-sonnet-4-6"     # LLM semantic fit (high volume)
-  tailoring: "claude-opus-4-8"     # CV / cover letter (Phase 5)
-  outreach: "claude-opus-4-8"      # LinkedIn outreach drafts (Phase 5)
+  scoring:                          # LLM semantic fit (high volume)
+    provider: openai
+    model: gpt-4o-mini
+  tailoring:                        # CV / cover letter (Phase 5)
+    provider: anthropic
+    model: claude-opus-4-8
+  outreach:                         # LinkedIn outreach drafts (Phase 5)
+    provider: anthropic
+    model: claude-opus-4-8
 
 # ---------------------------------------------------------------------------
 # CV CONTENT — master list of everything; agent selects and emphasises per JD

@@ -274,3 +274,21 @@ def test_mark_read_removes_unread_label():
     svc = FakeService({"messages": []})
     gmail.mark_read(svc, "m1")
     assert svc._users.modified == [("m1", {"removeLabelIds": ["UNREAD"]})]
+
+
+def test_list_thread_messages_returns_all():
+    """All messages regardless of UNREAD (single-account self-reply case)."""
+    thread = {
+        "messages": [
+            {"id": "m0", "labelIds": ["SENT"],
+             "payload": {"headers": [{"name": "Subject", "value": "digest"}],
+                         "mimeType": "text/plain", "body": {"data": _b64("the digest")}}},
+            {"id": "m1", "labelIds": ["SENT"],   # self-reply: NOT unread
+             "payload": {"headers": [{"name": "From", "value": "me@x.com"}],
+                         "mimeType": "text/plain", "body": {"data": _b64("prepare 1")}}},
+        ]
+    }
+    svc = FakeService(thread)
+    msgs = gmail.list_thread_messages(svc, "t1")
+    assert [m["message_id"] for m in msgs] == ["m0", "m1"]
+    assert msgs[1]["body"] == "prepare 1"

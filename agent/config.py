@@ -33,7 +33,28 @@ def load_profile(path: str | pathlib.Path | None = None) -> dict[str, Any]:
     with target.open() as fh:
         data = yaml.safe_load(fh)
     _validate_profile(data)
+    _apply_env_overrides(data)
     return data
+
+
+def _apply_env_overrides(data: dict[str, Any]) -> None:
+    """Layer plain-English / quick env settings on top of profile.yaml.
+
+    Lets the user tune preferences without editing YAML:
+      * JOB_PREFERENCES — free-text role/location/visa preferences, fed to the
+        LLM scorer so fit reflects what the user actually wants.
+      * LINKEDIN_URL — profile URL for display in outputs (CV, outreach drafts).
+        DISPLAY ONLY — the agent never logs into or automates LinkedIn.
+    """
+    prefs = os.environ.get("JOB_PREFERENCES")
+    if prefs:
+        data["job_preferences"] = prefs.strip()
+    else:
+        data.setdefault("job_preferences", "")
+
+    linkedin = os.environ.get("LINKEDIN_URL")
+    if linkedin:
+        data.setdefault("personal", {})["linkedin_url"] = linkedin.strip()
 
 
 def _validate_profile(data: dict[str, Any]) -> None:
@@ -63,12 +84,15 @@ def _validate_profile(data: dict[str, Any]) -> None:
 class Settings:
     """Runtime settings sourced from environment variables."""
 
-    anthropic_api_key: str
     neon_database_url: str
     gmail_client_id: str
     gmail_client_secret: str
     gmail_refresh_token: str
     email_to: str
+    # LLM provider keys — optional here; the SDK clients read them from env.
+    # At least one is needed depending on the providers configured in profile.yaml.
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
     log_level: str = "INFO"
     digest_top_n_override: int | None = None
 
@@ -87,12 +111,13 @@ class Settings:
         top_n = int(top_n_raw) if top_n_raw.strip().isdigit() else None
 
         return cls(
-            anthropic_api_key=_require("ANTHROPIC_API_KEY"),
             neon_database_url=_require("NEON_DATABASE_URL"),
             gmail_client_id=_require("GMAIL_CLIENT_ID"),
             gmail_client_secret=_require("GMAIL_CLIENT_SECRET"),
             gmail_refresh_token=_require("GMAIL_REFRESH_TOKEN"),
             email_to=_require("EMAIL_TO"),
+            openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
+            anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
             log_level=os.environ.get("LOG_LEVEL", "INFO"),
             digest_top_n_override=top_n,
         )

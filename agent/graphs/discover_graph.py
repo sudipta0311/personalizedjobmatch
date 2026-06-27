@@ -83,9 +83,19 @@ def node_dedupe(state: DiscoverState) -> DiscoverState:
 
 
 def node_score(state: DiscoverState) -> DiscoverState:
-    """Rule-gate + LLM-fit score each new job, then persist the scores."""
+    """Rule-gate + LLM-fit score each new job, then persist the scores.
+
+    MAX_JOBS_PER_RUN (env) caps how many jobs are LLM-scored per run — a safety
+    valve on API cost/latency, useful for testing and for the first big run.
+    """
     profile = state["profile"]
     jobs = state.get("persisted_jobs", [])
+
+    cap_raw = os.environ.get("MAX_JOBS_PER_RUN", "")
+    if cap_raw.strip().isdigit() and int(cap_raw) > 0 and len(jobs) > int(cap_raw):
+        logger.info("Score: capping %d jobs to MAX_JOBS_PER_RUN=%s", len(jobs), cap_raw)
+        jobs = jobs[: int(cap_raw)]
+
     scored = score_jobs(jobs, profile)
     persist_scores(scored)
     return {**state, "scored_jobs": scored}

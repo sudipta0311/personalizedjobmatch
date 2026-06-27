@@ -6,6 +6,8 @@ and these tests pass a fake whose messages.parse returns a canned LLMFit.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from agent.scoring import rules
@@ -47,31 +49,48 @@ def profile() -> dict:
             "hard_veto_on_auth": ["not_authorised"],
         },
         "cv_content": {"summary": "s", "skills": {}, "certifications": []},
-        "models": {"scoring": "claude-sonnet-4-6"},
+        "models": {"scoring": {"provider": "openai", "model": "gpt-4o-mini"}},
     }
 
 
-class FakeParseResponse:
-    def __init__(self, fit: LLMFit):
-        self.parsed_output = fit
-
-
-class FakeClient:
-    """Stands in for anthropic.Anthropic — records calls, returns a canned fit."""
+class FakeOpenAIClient:
+    """Stands in for openai.OpenAI — records calls, returns the canned fit as JSON."""
 
     def __init__(self, fit: LLMFit):
         self._fit = fit
         self.calls: list[dict] = []
+        outer = self
 
+        class _Completions:
+            def create(self, **kwargs):
+                outer.calls.append(kwargs)
+                content = outer._fit.model_dump_json()
+                return SimpleNamespace(
+                    choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+                )
+
+        self.chat = SimpleNamespace(completions=_Completions())
+
+
+class FakeAnthropicClient:
+    """Stands in for anthropic.Anthropic — records calls, returns a parsed fit."""
+
+    def __init__(self, fit: LLMFit):
+        self._fit = fit
+        self.calls: list[dict] = []
         outer = self
 
         class _Messages:
             @staticmethod
             def parse(**kwargs):
                 outer.calls.append(kwargs)
-                return FakeParseResponse(outer._fit)
+                return SimpleNamespace(parsed_output=outer._fit)
 
         self.messages = _Messages()
+
+
+# Default injected client matches the default provider (OpenAI).
+FakeClient = FakeOpenAIClient
 
 
 def _fit(score: int = 85) -> LLMFit:
@@ -284,16 +303,52 @@ def test_score_row_shape(profile):
 # ---------------------------------------------------------------------------
 
 def test_score_fit_degrades_on_error(profile):
-    class BoomClient:
-        class messages:
-            @staticmethod
-            def parse(**kwargs):
-                raise RuntimeError("api down")
+    class _Boom:
+        def create(self, **kwargs):
+            raise RuntimeError("api down")
 
+    boom = SimpleNamespace(chat=SimpleNamespace(completions=_Boom()))
     fit = score_fit({"title": "X", "company": "Y", "jd_text": "z"},
-                    profile, client=BoomClient())
+                    profile, client=boom)
     assert fit.fit_score == 50
     assert "unavailable" in fit.gaps[0]
+
+
+def test_score_fit_anthropic_provider(profile):
+    """provider override routes to the Anthropic messages.parse path."""
+    client = FakeAnthropicClient(_fit(77))
+    fit = score_fit(
+        {"title": "X", "company": "Y", "jd_text": "z"},
+        profile, client=client, provider="anthropic", model="claude-sonnet-4-6",
+    )
+    assert fit.fit_score == 77
+    assert len(client.calls) == 1
+    assert client.calls[0]["model"] == "claude-sonnet-4-6"
+
+
+def test_score_fit_uses_openai_by_default(profile):
+    """With the default profile (provider: openai), the OpenAI client is used."""
+    client = FakeOpenAIClient(_fit(91))
+    fit = score_fit({"title": "X", "company": "Y", "jd_text": "z"},
+                    profile, client=client)
+    assert fit.fit_score == 91
+    assert client.calls[0]["model"] == "gpt-4o-mini"
+
+
+def test_preferences_injected_into_prompt(profile):
+    profile["job_preferences"] = "Senior AI Architect in EU or UAE with visa sponsorship"
+    client = FakeOpenAIClient(_fit(80))
+    score_fit({"title": "X", "company": "Y", "jd_text": "z"}, profile, client=client)
+    system_msg = client.calls[0]["messages"][0]["content"]
+    assert "CANDIDATE PREFERENCES" in system_msg
+    assert "visa sponsorship" in system_msg
+
+
+def test_preferences_absent_when_not_set(profile):
+    client = FakeOpenAIClient(_fit(80))
+    score_fit({"title": "X", "company": "Y", "jd_text": "z"}, profile, client=client)
+    system_msg = client.calls[0]["messages"][0]["content"]
+    assert "CANDIDATE PREFERENCES" not in system_msg
 
 
 # ---------------------------------------------------------------------------

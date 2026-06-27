@@ -39,7 +39,7 @@ class ReplyState(TypedDict, total=False):
 
 
 def node_poll_replies(state: ReplyState) -> ReplyState:
-    """Scan recent digest threads for unread replies."""
+    """Scan recent digest threads for reply messages (everything but the digest)."""
     settings = state.get("settings") or Settings.from_env()
     service = state.get("service") or gmail.build_service(settings)
 
@@ -48,12 +48,15 @@ def node_poll_replies(state: ReplyState) -> ReplyState:
         thread_id = digest.get("gmail_thread_id")
         if not thread_id:
             continue
-        for msg in gmail.list_unread_replies(service, thread_id):
+        digest_msg_id = digest.get("gmail_message_id")
+        for msg in gmail.list_thread_messages(service, thread_id):
+            if msg["message_id"] == digest_msg_id:
+                continue  # the digest we sent — not a reply
             msg["digest_id"] = digest["id"]
             msg["index_map"] = digest.get("index_map") or {}
             replies.append(msg)
 
-    logger.info("Poller: found %d unread reply message(s)", len(replies))
+    logger.info("Poller: found %d candidate reply message(s)", len(replies))
     return {**state, "settings": settings, "service": service, "unread_replies": replies}
 
 
@@ -75,6 +78,11 @@ def node_execute(state: ReplyState) -> ReplyState:
     for reply in state.get("parsed_commands", []):
         message_id = reply["message_id"]
         commands = reply.get("commands", [])
+
+        # Skip messages with no commands (the digest's own help text, our acks,
+        # plain "thanks" replies) — don't claim or acknowledge them.
+        if not commands:
+            continue
 
         # Idempotency gate: claim the message before doing any work.
         command_id = persistence.claim_command(

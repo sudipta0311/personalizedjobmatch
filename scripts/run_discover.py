@@ -9,7 +9,12 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import sys
+
+# Ensure the project root is importable whether run as `python scripts/run_discover.py`
+# or `python -m scripts.run_discover` (GitHub Actions uses the former).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
 

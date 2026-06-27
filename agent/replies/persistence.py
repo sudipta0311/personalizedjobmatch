@@ -23,7 +23,7 @@ def recent_digests(limit: int = 8) -> list[dict[str, Any]]:
         with get_cursor(conn) as cur:
             cur.execute(
                 """
-                SELECT id, gmail_thread_id, index_map
+                SELECT id, gmail_thread_id, gmail_message_id, index_map
                 FROM digests
                 WHERE gmail_thread_id IS NOT NULL
                 ORDER BY sent_at DESC
@@ -42,8 +42,10 @@ def claim_command(
 ) -> str | None:
     """Insert a command row, returning its id — or None if already processed.
 
-    The unique gmail_message_id makes this the idempotency gate: a second run
-    seeing the same reply gets a conflict (no row returned) and skips it.
+    The unique gmail_message_id is the idempotency gate. We return the command id
+    when the reply is NEW, or when a prior attempt was claimed but never finished
+    (processed_at IS NULL) — so a crash mid-processing is retried. We return None
+    only when the reply was already fully processed.
     """
     with get_connection() as conn:
         with get_cursor(conn) as cur:
@@ -58,7 +60,18 @@ def claim_command(
                 (digest_id, gmail_message_id, raw_text, Json(parsed)),
             )
             row = cur.fetchone()
-    return str(row["id"]) if row else None
+            if row:
+                return str(row["id"])   # brand-new reply
+
+            # Row already exists — reprocess only if a prior run didn't finish.
+            cur.execute(
+                "SELECT id, processed_at FROM commands WHERE gmail_message_id = %s",
+                (gmail_message_id,),
+            )
+            existing = cur.fetchone()
+    if existing and existing["processed_at"] is None:
+        return str(existing["id"])
+    return None
 
 
 def mark_command_processed(command_id: str) -> None:
@@ -106,9 +119,11 @@ def job_titles(job_ids: list[Any]) -> dict[Any, str]:
         return {}
     with get_connection() as conn:
         with get_cursor(conn) as cur:
+            # index_map stores job_ids as JSON strings; cast the uuid column to
+            # text so the comparison works (uuid = text has no operator).
             cur.execute(
-                "SELECT id, title, company FROM jobs WHERE id = ANY(%s)",
-                (job_ids,),
+                "SELECT id::text AS id, title, company FROM jobs WHERE id::text = ANY(%s)",
+                ([str(j) for j in job_ids],),
             )
             return {
                 r["id"]: f"{r['title']} — {r['company']}" for r in cur.fetchall()

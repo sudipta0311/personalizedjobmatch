@@ -54,3 +54,23 @@ def test_load_profile_missing_personal_name(tmp_path):
     _write_profile(bad, p)
     with pytest.raises(ValueError, match="name"):
         load_profile(str(p))
+
+
+def test_env_overrides_preferences_and_linkedin(tmp_path, monkeypatch):
+    from agent.config import load_profile
+    monkeypatch.setenv("JOB_PREFERENCES", "Senior AI Architect in EU")
+    monkeypatch.setenv("LINKEDIN_URL", "https://linkedin.com/in/test")
+    p = tmp_path / "profile.yaml"
+    _write_profile(MINIMAL_PROFILE, p)
+    profile = load_profile(str(p))
+    assert profile["job_preferences"] == "Senior AI Architect in EU"
+    assert profile["personal"]["linkedin_url"] == "https://linkedin.com/in/test"
+
+
+def test_job_preferences_defaults_empty(tmp_path, monkeypatch):
+    from agent.config import load_profile
+    monkeypatch.delenv("JOB_PREFERENCES", raising=False)
+    p = tmp_path / "profile.yaml"
+    _write_profile(MINIMAL_PROFILE, p)
+    profile = load_profile(str(p))
+    assert profile["job_preferences"] == ""

@@ -28,6 +28,9 @@ htmlcov/
 output/
 *.docx
 *.pdf
+*.log
+e2e_*.log
+cv_output.txt
 
 # --- Editor ---
 .vscode/
