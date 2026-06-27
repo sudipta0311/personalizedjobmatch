@@ -1,0 +1,338 @@
+# profile.yaml — master profile for the job-search agent
+# This file is the ONLY source of truth for CV content, preferences, and filters.
+# The agent reads this and never fabricates — it only reorders/emphasises what is here.
+# SECURITY: Never commit this file with real personal data to a public repo.
+# Populate every section; delete the placeholder comments when you fill them in.
+
+# ---------------------------------------------------------------------------
+# PERSONAL CONTACT
+# ---------------------------------------------------------------------------
+personal:
+  name: "Sudipta Sarkar"
+  email: "sudipta0311@gmail.com"
+  phone: "+45 91 62 90 54"
+  location: "Copenhagen, Denmark"
+  linkedin_url: "https://www.linkedin.com/in/sudipta-sarkar-73aaa85/"   # profile URL only — never automated
+  github_url: "https://github.com/yourusername"
+  website: ""  # optional personal site / portfolio
+
+# ---------------------------------------------------------------------------
+# SENIORITY — used by rule gates to flag grade mismatches
+# ---------------------------------------------------------------------------
+seniority:
+  level: "senior"       # junior | mid | senior | principal | director
+  years_experience: 15
+  min_years_in_jd: 8    # flag roles requiring fewer years (overqualified risk)
+  max_years_in_jd: 20   # flag roles requiring significantly more (out-of-reach risk)
+
+# ---------------------------------------------------------------------------
+# TARGET — what the agent should chase; what to skip
+# ---------------------------------------------------------------------------
+target:
+  titles:
+    - "Senior AI Architect"
+    - "Principal AI Architect"
+    - "Enterprise AI Architect"
+    - "Head of AI"
+    - "AI Platform Lead"
+    - "Staff AI Engineer"
+  exclude_title_substrings:   # skip if job title contains any of these (case-insensitive)
+    - "Junior"
+    - "Graduate"
+    - "Intern"
+    - "VP of Engineering"     # exclude pure executive titles
+    - "Chief People"
+  exclude_companies: []       # company names to always skip (exact or substring match)
+  exclude_domains: []         # e.g. ["gambling", "crypto"] — checked against JD text
+
+# ---------------------------------------------------------------------------
+# MARKET FRAMINGS
+# CV headline and positioning line are swapped per market tag.
+# The agent picks the framing that matches the role's market_tag.
+# ---------------------------------------------------------------------------
+market_framings:
+  eu:
+    positioning: >
+      Senior AI and enterprise architect with 15+ years designing agentic systems,
+      RAG pipelines, and cloud-native data platforms across European enterprises.
+    cv_headline: "Senior AI & Enterprise Architect | Agentic AI · RAG · Azure/AWS/GCP"
+    keywords_emphasis:
+      - "LLM orchestration"
+      - "agentic AI"
+      - "RAG"
+      - "LangChain"
+      - "LangGraph"
+      - "Azure"
+      - "Databricks"
+      - "enterprise architecture"
+
+  india:
+    positioning: >
+      Returning senior AI architect with 15+ years of global enterprise experience,
+      specialising in agentic systems, cloud-native AI platforms, and centre-of-excellence build-outs.
+    cv_headline: "Senior AI & Enterprise Architect | Agentic AI · RAG · Cloud · Digital Transformation"
+    keywords_emphasis:
+      - "digital transformation"
+      - "center of excellence"
+      - "AI/ML platform"
+      - "cloud adoption"
+      - "stakeholder management"
+
+  gcc:
+    positioning: >
+      Senior AI and enterprise architect delivering large-scale digital transformation and
+      intelligent automation for government and enterprise clients across the Gulf.
+    cv_headline: "Senior AI & Enterprise Architect | Digital Transformation · Agentic AI · Cloud"
+    keywords_emphasis:
+      - "digital transformation"
+      - "intelligent automation"
+      - "enterprise architecture"
+      - "Vision 2030"
+      - "government AI"
+      - "smart city"
+
+# ---------------------------------------------------------------------------
+# WORK AUTHORISATION — per ISO 3166-1 alpha-2 country code
+# Values: authorised | blue_card_eligible | citizen | needs_visa |
+#         needs_licensed_sponsor | not_authorised | unknown
+# The rule gate maps the role's country to this table.
+# ---------------------------------------------------------------------------
+work_authorisation:
+  DK: "authorised"             # Danish work permit / residency
+  NL: "blue_card_eligible"     # EU Blue Card / Highly Skilled Migrant
+  DE: "blue_card_eligible"
+  SE: "blue_card_eligible"
+  BE: "blue_card_eligible"
+  FR: "blue_card_eligible"
+  FI: "blue_card_eligible"
+  NO: "needs_visa"             # Norway — not EU, check separately
+  IN: "citizen"
+  AE: "needs_visa"             # UAE — employer sponsors visa
+  SA: "needs_visa"
+  QA: "needs_visa"
+  BH: "needs_visa"
+  KW: "needs_visa"
+  OM: "needs_visa"
+  GB: "needs_licensed_sponsor" # UK — Skilled Worker, must be licensed sponsor → always flag
+  US: "not_authorised"         # no current US work authorisation
+  CA: "not_authorised"
+  AU: "not_authorised"
+  default: "unknown"           # fall-through for unlisted countries
+
+# ---------------------------------------------------------------------------
+# DISCOVERY — sources and search parameters
+# ---------------------------------------------------------------------------
+discovery:
+  sources:
+    greenhouse:
+      enabled: true
+      # List the Greenhouse board slugs for companies you want to monitor.
+      # Find the slug in a company's Greenhouse URL: jobs.greenhouse.io/<slug>
+      boards:
+        - "anthropic"         # example — replace with real targets
+        - "databricks"
+        - "palantir"
+      # Optional: fetch ALL jobs from a board (true) or filter by keyword (false).
+      # When true, the agent fetches every job and filters client-side.
+      fetch_all: true
+
+    lever:
+      enabled: false          # enable in Phase 2+
+      companies: []           # Lever site slugs
+
+    career_pages:
+      enabled: false          # enable in Phase 2+
+      pages: []               # list of {company: str, url: str} dicts
+
+  search_keywords:            # title/description filter applied client-side
+    - "AI architect"
+    - "enterprise architect"
+    - "agentic"
+    - "LLM"
+    - "head of AI"
+    - "machine learning architect"
+    - "data architect"
+
+  preferred_locations:        # soft preference — stored as market_tag metadata
+    - "Netherlands"
+    - "Denmark"
+    - "Germany"
+    - "India"
+    - "UAE"
+    - "Remote"
+    - "Europe"
+
+  remote_ok: true
+  max_age_days: 30            # ignore postings older than this
+
+# ---------------------------------------------------------------------------
+# SCORING
+# ---------------------------------------------------------------------------
+scoring:
+  composite_weights:
+    llm_fit: 0.60
+    auth_fit: 0.20
+    grade_fit: 0.20
+  cutoff_score: 60            # drop roles below this composite score
+  top_n_digest: 10            # max roles to include in the weekly digest
+  hard_veto_on_auth:          # these auth statuses are hard veto (role not shown)
+    - "not_authorised"
+
+# ---------------------------------------------------------------------------
+# MODELS — per-node Claude model selection (overridable here).
+# Sonnet for high-volume scoring; Opus for quality-critical tailoring/outreach.
+# Use the bare model-id strings (no date suffix).
+# ---------------------------------------------------------------------------
+models:
+  scoring: "claude-sonnet-4-6"     # LLM semantic fit (high volume)
+  tailoring: "claude-opus-4-8"     # CV / cover letter (Phase 5)
+  outreach: "claude-opus-4-8"      # LinkedIn outreach drafts (Phase 5)
+
+# ---------------------------------------------------------------------------
+# CV CONTENT — master list of everything; agent selects and emphasises per JD
+# Fill this with REAL content only. Never fabricate.
+# ---------------------------------------------------------------------------
+cv_content:
+  summary: >
+    Senior AI and enterprise architect with 15+ years of experience designing
+    and delivering production-grade AI systems, cloud-native data platforms, and
+    enterprise architecture programmes. Specialist in agentic AI, RAG pipelines,
+    and LLM orchestration. Proven track record leading cross-functional teams and
+    translating complex AI capabilities into measurable business outcomes.
+
+  experience:
+    - id: "exp-001"           # stable ID — used by parse-verify
+      title: "Senior AI Architect"
+      company: "Acme Corp"
+      location: "Copenhagen, Denmark"
+      start: "2021-01"
+      end: null               # null = present
+      bullets:
+        - "Designed and delivered an agentic AI platform handling 50K+ daily queries using LangGraph and Azure OpenAI, reducing analyst time-to-insight by 65%."
+        - "Led RAG pipeline implementation over a 2M-document corpus (Databricks Vector Search + GPT-4), enabling semantic search across 12 business units."
+        - "Architected multi-cloud governance framework adopted by 8 EU subsidiaries, ensuring GDPR compliance and ISO 27001 alignment."
+      technologies:
+        - "LangChain"
+        - "LangGraph"
+        - "Azure OpenAI"
+        - "Databricks"
+        - "Python"
+        - "Terraform"
+
+    - id: "exp-002"
+      title: "Enterprise Architect"
+      company: "Previous Company"
+      location: "Amsterdam, Netherlands"
+      start: "2018-03"
+      end: "2021-01"
+      bullets:
+        - "Placeholder — replace with real bullet using Action + Metric + Impact format."
+        - "Placeholder — add 2–4 bullets per role."
+      technologies:
+        - "Azure"
+        - "Microservices"
+        - "Event-driven architecture"
+        - "Domain-driven design"
+
+    - id: "exp-003"
+      title: "Solution Architect"
+      company: "Earlier Company"
+      location: "London, United Kingdom"
+      start: "2014-06"
+      end: "2018-02"
+      bullets:
+        - "Placeholder."
+      technologies:
+        - "AWS"
+        - "Java"
+        - "Spring Boot"
+
+  education:
+    - id: "edu-001"
+      degree: "MSc Computer Science"
+      institution: "University Name"
+      year: 2009
+      location: "City, Country"
+    - id: "edu-002"
+      degree: "BSc Computer Engineering"
+      institution: "University Name"
+      year: 2007
+      location: "City, Country"
+
+  certifications:
+    - name: "Azure Solutions Architect Expert"
+      issuer: "Microsoft"
+      year: 2022
+      credential_id: ""       # optional
+    - name: "AWS Certified Solutions Architect — Professional"
+      issuer: "Amazon Web Services"
+      year: 2021
+      credential_id: ""
+
+  skills:
+    ai_ml:
+      - "LangChain"
+      - "LangGraph"
+      - "RAG / retrieval-augmented generation"
+      - "Vector search"
+      - "Prompt engineering"
+      - "Fine-tuning (LoRA, PEFT)"
+      - "Agentic AI systems"
+      - "MLflow"
+    cloud:
+      - "Azure (Expert — Solutions Architect certified)"
+      - "AWS (Professional)"
+      - "GCP"
+      - "Databricks"
+      - "Terraform"
+      - "Kubernetes"
+    architecture:
+      - "Enterprise architecture (TOGAF)"
+      - "Domain-driven design"
+      - "Event-driven architecture"
+      - "Microservices"
+      - "API design (REST, GraphQL)"
+    languages_programming:
+      - "Python (advanced)"
+      - "SQL (advanced)"
+      - "TypeScript"
+      - "Bash"
+
+  languages:
+    - language: "English"
+      level: "Fluent (C2)"
+    - language: "Danish"
+      level: "Conversational (B1)"
+    - language: "Hindi"
+      level: "Native"
+
+# ---------------------------------------------------------------------------
+# LETTER STYLE — guides the LLM when writing cover letters and outreach
+# ---------------------------------------------------------------------------
+letter_style:
+  tone: "confident and direct — not sycophantic, not over-eager"
+  length: "3 paragraphs, under 350 words"
+  avoid_phrases:
+    - "I am writing to express my interest in"
+    - "I would be a great fit"
+    - "thrilled and excited"
+    - "passionate about"
+    - "dynamic team"
+  voice_notes: >
+    First person, active voice. Open with what I can deliver for THEM, not
+    what the role offers me. Acknowledge gaps honestly and briefly — one sentence
+    maximum. Reference specific technologies or business challenges from the JD.
+    Close with a concrete next step, not platitudes. No more than 3 paragraphs.
+
+# ---------------------------------------------------------------------------
+# PREFERENCES — used in form answers and scheduling context
+# ---------------------------------------------------------------------------
+notice_period: "1 month"
+relocation_open: true
+remote_preference: "hybrid or fully remote"
+
+salary_expectation:
+  eu_eur: 120000      # annual gross, EUR
+  india_inr: 5000000  # annual gross, INR
+  gcc_usd: 150000     # annual gross, USD (tax-free in most GCC states)
+  note: "These are targets; the agent never surfaces exact figures unless asked."
